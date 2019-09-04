@@ -14,11 +14,11 @@ Program to display the contents of used inodes on disk using the ext2 FS.
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <ext2fs/ext2_fs.h>
+#include <ext2fs/ext2_fs.h>                /*Included the ext2fs Library File instead of using native Linux Library */
 
 #define BASE_OFFSET 1024                   /* locates beginning of the super block (first group) */
-#define FD_DEVICE "/dev/sdb1"               /* the floppy disk device */
-#define BLOCK_OFFSET(block) ((block-1)*block_size)
+#define FD_DEVICE "/dev/sdb1"               /* the disk device file */
+#define BLOCK_OFFSET(block) ((block-1)*block_size)          /*Calculating the exact block offset by using Block number */
 static unsigned int block_size = 0;        /* block size (to be calculated) */
 
 int main(void)
@@ -27,11 +27,11 @@ int main(void)
 	struct ext2_group_desc group;
 	int fd;
 	unsigned char *bitmap;
-	/* open floppy device */
+	/* open device file */
 
 	if ((fd = open(FD_DEVICE, O_RDONLY)) < 0) {
 		perror(FD_DEVICE);
-		exit(1);  /* error while opening the floppy device */
+		exit(1);  /* error while opening the device */
 	}
 
 	/* read super-block */
@@ -75,4 +75,4 @@ int main(void)
 	       group.bg_used_dirs_count);    /* directories count */
 	free(bitmap);
 	exit(0);
-} /* main() */
+} 
