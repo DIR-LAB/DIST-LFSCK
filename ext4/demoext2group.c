@@ -23,20 +23,20 @@ static unsigned int block_size = 0;        /* block size (to be calculated) */
 static void read_inode(fd, inode_no, group, inode)
       int                           fd;        /* the floppy disk file descriptor */
       int                           inode_no;  /* the inode number to read  */
-      const struct ext2_group_desc *group;     /* the block group to which the inode belongs */
-      struct ext2_inode            *inode;     /* where to put the inode from disk  */
+      const struct ext4_group_desc *group;     /* the block group to which the inode belongs */
+      struct ext4_inode            *inode;     /* where to put the inode from disk  */
 {
-         lseek(fd, BLOCK_OFFSET(group->bg_inode_table)+(inode_no-1)*sizeof(struct ext2_inode), SEEK_SET);
-         read(fd, inode, sizeof(struct ext2_inode));
+         lseek(fd, BLOCK_OFFSET(group->bg_inode_table)+(inode_no-1)*sizeof(struct ext4_inode), SEEK_SET);
+         read(fd, inode, sizeof(struct ext4_inode));
 }
  
 int main(void)
 {
-	struct ext2_super_block super;
-	struct ext2_group_desc group;
+	struct ext4_super_block super;
+	struct ext4_group_desc group;
 	int fd;
 	unsigned char *bitmap=0;
-	struct ext2_inode *test_inode;
+	struct ext4_inode *test_inode;
 	/* open floppy device */
 
 	if ((fd = open(FD_DEVICE, O_RDONLY)) < 0) {
@@ -49,8 +49,8 @@ int main(void)
 	lseek(fd, BASE_OFFSET, SEEK_SET); 
 	read(fd, &super, sizeof(super));
 
-	if (super.s_magic != EXT2_SUPER_MAGIC) {
-		fprintf(stderr, "Not a Ext2 filesystem\n");
+	if (super.s_magic != EXT4_SUPER_MAGIC) {
+		fprintf(stderr, "Not a Ext4 filesystem\n");
 		exit(1);
 	} 
 		
