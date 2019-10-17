@@ -1,6 +1,6 @@
 /*
 
-Program to display the contents of used inodes on disk using the ext2 FS.
+Program to display the contents of used inodes on disk using the ext4 FS.
 
 
 
@@ -15,9 +15,9 @@ Program to display the contents of used inodes on disk using the ext2 FS.
 #include <stdlib.h>
 #include <unistd.h>
 #include <ext2fs/ext2_fs.h>
-
+#include "ext4.h"
 #define BASE_OFFSET 1024                   /* locates beginning of the super block (first group) */
-#define FD_DEVICE "/dev/sdc1"               /* the floppy disk device */
+#define FD_DEVICE "/dev/sdb1"               /* the floppy disk device */
 #define BLOCK_OFFSET(block) ((block-1)*block_size)
 static unsigned int block_size = 0;        /* block size (to be calculated) */
 static void read_inode(fd, inode_no, group, inode)
