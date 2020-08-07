@@ -1,10 +1,6 @@
 //contains struct for:
 //inode table, superblock, group descriptor table for ext4
 
-
-
-
-
 #define	EXT4_NDIR_BLOCKS		12
 #define	EXT4_IND_BLOCK			EXT4_NDIR_BLOCKS
 #define	EXT4_DIND_BLOCK			(EXT4_IND_BLOCK + 1)
@@ -12,7 +8,6 @@
 #define	EXT4_N_BLOCKS			(EXT4_TIND_BLOCK + 1)
 
 #include </usr/include/linux/types.h>
-
 
 /*
  * Structure of an inode on the disk
