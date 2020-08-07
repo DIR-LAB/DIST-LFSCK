@@ -20,6 +20,7 @@ Filesystem     Type      Size  Used Avail Use% Mounted on
 /dev/loop16    ext4      488M  792K  452M   1% /mnt/ext4ramdisk
 ```
 
+## Run ext4_checker
 ```
 //To execute the ext4_checker.c
 
@@ -27,6 +28,7 @@ sudo gcc ext4_checker.c -o ext4_checker -lm
 sudo ./ext4_checker
 ```
 
+## Get some tests done
 ```
 //segment is /dev/loop16
 //mount point is /mnt/ext4ramdisk
