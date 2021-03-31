@@ -53,13 +53,11 @@ static unsigned int block_size = 0;        /* block size (to be calculated) */
 #define EIO		 5
 #define EINVAL		22	/* Invalid argument */
 /*------------------------------------------------------------------------------------------------------*/
-//SK: IHDR modified by me
 #define IHDR(inode) \
 	((struct ext4_xattr_ibody_header *) \
 		((void *)inode + \
 		EXT4_GOOD_OLD_INODE_SIZE + \
 		32))
-//SK:32 is i_extra_isize
 /*------------------------------------------------------------------------------------------------------*/
 #define IFIRST(hdr) ((struct ext4_xattr_entry *)((hdr)+1))
 /*------------------------------------------------------------------------------------------------------*/
