@@ -1,0 +1,74 @@
+
+// SK: April 2021
+//Lov-EA 
+
+
+#define 	LOV_MAGIC_V1   0x0BD10BD0
+//This is struct for layout header 
+struct lov_mds_md_v1 {            /* LOV EA mds/wire data (little-endian) */
+        __u32 lmm_magic;          /* magic number = LOV_MAGIC_V1 */
+        __u32 lmm_pattern;        /* LOV_PATTERN_RAID0, LOV_PATTERN_RAID1 */
+        struct ost_id   lmm_oi;   /* LOV object ID */
+        __u32 lmm_stripe_size;    /* size of stripe in bytes */
+        /* lmm_stripe_count used to be __u32 */
+        __u16 lmm_stripe_count;   /* num stripes in use for this object */
+        __u16 lmm_layout_gen;     /* layout generation number */
+        struct lov_ost_data_v1 lmm_objects[0]; /* per-stripe data */
+};
+
+
+
+LOV_MAGIC_COMP_V1 = 0x0BD40BD0;
+//This struct is for composite header
+struct lov_comp_md_v1 {
+        __u32 lcm_magic;        /* LOV_MAGIC_COMP_V1 */
+        __u32 lcm_size;         /* overall size of layout including this structure */
+        __u32 lcm_layout_gen;
+        __u16 lcm_flags;
+        __u16 lcm_entry_count;
+        __u64 lcm_padding1;
+        __u64 lcm_padding2;
+        struct lov_comp_md_entry_v1 lcm_entries[0];
+};
+
+
+
+
+
+//This struct is for composite entry
+struct lov_comp_md_entry_v1 {
+        __u32 lcme_id;                  /* unique identifier of component */
+        __u32 lcme_flags;               /* LCME_FL_XXX */
+        struct lu_extent lcme_extent;   /* file extent for component */
+        __u32 lcme_offset;              /* offset of component blob in layout */
+        __u32 lcme_size;                /* size of component blob data */
+        __u64 lcme_padding[2];
+};
+
+
+
+
+// other interdependent required structs
+
+struct lu_extent {
+       __u64 e_start;
+       __u64 e_end;
+};
+
+
+struct lov_ost_data_v1 {          /* per-stripe data structure (little-endian)*/
+        struct ost_id l_ost_oi;   /* OST object ID */
+        __u32 l_ost_gen;          /* generation of this l_ost_idx */
+        __u32 l_ost_idx;          /* OST index in LOV (lov_tgt_desc->tgts) */
+};
+
+
+
+
+
+
+
+
+
+
+
