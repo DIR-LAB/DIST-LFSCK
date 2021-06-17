@@ -28,7 +28,6 @@
 #define IFIRST(hdr) ((struct ext4_xattr_entry *)((hdr) + 1))
 
 
-
 #define IS_LAST_ENTRY(entry) (*(__u32 *)(entry) == 0)
 #define EXT4_XATTR_NEXT(entry) \
 	((struct ext4_xattr_entry *)((char *)(entry) + EXT4_XATTR_LEN((entry)->e_name_len)))
