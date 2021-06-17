@@ -22,7 +22,6 @@ struct ext4_xattr_header
 
 
 
-
 //internal + external
 struct ext4_xattr_ibody_header
 {
