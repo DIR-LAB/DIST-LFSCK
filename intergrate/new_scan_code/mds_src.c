@@ -177,11 +177,7 @@ int main(void)
 
 				/*obtain and print the lov xattr value*/
 				uint64_t value_location = inode_location +EXT4_GOOD_OLD_INODE_SIZE + test_inode.i_extra_isize+ sizeof(struct ext4_xattr_ibody_header) +entry->e_value_offs;
-				/*needs more work: convert ablove into a MACRO*/
-				/*
-				value_location = VALUE_LOC(&test_inode,entry);
-				printf("value_location:%d",value_location);
-				*/
+				
 
 
 				/*print the xattr value in terminal and file1.txt*/
@@ -210,14 +206,7 @@ int main(void)
 					read(fd, &lum, sizeof(struct lov_user_md));
 					
 					
-					//struct lov_comp_md_v1 *comp_v1 = NULL; /*for multiple component*/
-					// struct lov_comp_md_entry_v1 *ent;
-
-					// struct lov_user_md *v1;
-					// struct llapi_layout *layout = NULL;
-					// struct llapi_layout_comp *comp;
 					
-					//layout = __llapi_layout_alloc();
 					
 					 
 					 
@@ -243,13 +232,6 @@ int main(void)
 
 					
 					
-					//if (lum.lmm_pattern == LOV_PATTERN_RAID0)
-					
-
-
-
-
-
 						/*printing wrt lum: user_md*/
 						fprintf(fPtr,"stripe size : %d bytes\n",lum.lmm_stripe_size);
 						fprintf(fPtr,"stripe count: %d number of stripes\n\n", lum.lmm_stripe_count);
@@ -280,13 +262,7 @@ int main(void)
 						/*---------------------------------*/
 
 						
-
-					
-
-
-
-
-
+	
 
 
 
