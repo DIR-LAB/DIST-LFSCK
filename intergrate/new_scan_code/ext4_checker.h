@@ -17,6 +17,7 @@
 /*
  * Structure of an inode on the disk
  */
+
 struct inode
 {
 	__le16 i_mode;		  /* File mode */
