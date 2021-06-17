@@ -126,7 +126,7 @@ int main(void)
 	/*get size of inode in bytes using info from super block*/
 	int inode_size = 0;
 	inode_size = super.s_inode_size;
-	
+
 
 	int entry_count=0; /*used to check total number of entries*/
 	for (int i = 0; i< total_inodes; i++)
