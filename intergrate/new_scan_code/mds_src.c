@@ -1,5 +1,4 @@
 
-
 /* libraries for mds inode + attribute reading code*/
 #include <math.h>
 #include <inttypes.h>
@@ -9,12 +8,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-//#include "endian.h"
 #include "ext4_checker.h"
 #include "xattr_sk.h"
+#include "/usr/include/linux/swab.h"
+#include "/usr/include/linux/byteorder/little_endian.h"
+ 
 
-/* libraries required foe neo4j client*/
-//#include <neo4j-client.h>
+/* Neo4j: libraries required foe neo4j client*/
+#include <neo4j-client.h>
 #include <errno.h>
 #include <time.h>
 
@@ -35,12 +36,7 @@
 
 #define IFIRST(hdr) ((struct ext4_xattr_entry *)((hdr) + 1))
 
-/*sk:value location MACRO for an xattr*/
-/* needs more work
-#define VALUE_LOC(inode,ext4_xattr_entry) (uint64_t)((void *)inode +            \
-										EXT4_GOOD_OLD_INODE_SIZE + \
-										32 + sizeof(struct ext4_xattr_ibody_header) + ext4_xattr_entry->e_value_offs)
-										*/
+
 
 #define IS_LAST_ENTRY(entry) (*(__u32 *)(entry) == 0)
 #define EXT4_XATTR_NEXT(entry) \
@@ -53,21 +49,16 @@
 #define EXT4_XATTR_PAD (1 << EXT4_XATTR_PAD_BITS)
 #define EXT4_XATTR_ROUND (EXT4_XATTR_PAD - 1)
 
+
+
+
+
 int main(void)
 {
 
-	/*file to note the entries and values*/
-	FILE *fPtr;
-	fPtr = fopen("file1.txt", "w");
-	if (fPtr == NULL)
-	{
-		/* File not created hence exit */
-		printf("Unable to create file.\n");
-		exit(EXIT_FAILURE);
-	}
 
-	/*initializing neo4j-client*/
-	//neo4j_client_init();
+
+	
 
 	/*accessing the disk*/
 	int fd;
@@ -91,6 +82,21 @@ int main(void)
 		exit(1);
 	}
 
+
+
+	/*Neo4j: initializing neo4j-client*/
+	neo4j_client_init();
+
+	neo4j_connection_t *connection =
+   	neo4j_connect("neo4j://neo4j:sk@localhost:7687", NULL, NEO4J_INSECURE);
+ 
+            
+   	 if (connection == NULL)
+  	  {
+     	   neo4j_perror(stderr, errno, "Connection failed");
+      	   return EXIT_FAILURE;
+  	  }
+
 	//block_size  = 2^(10 + super.s_log_block_size) : ext4 documentation
 	static unsigned int block_size = 0;
 	block_size = pow(2, 10 + super.s_log_block_size);
@@ -104,7 +110,7 @@ int main(void)
 
 	int inode_table = group.bg_inode_table; /*get inode table location using group descriptor table*/
 
-	/*get total number if inodes for this filesystem using info from super block*/
+	/*get total number of inodes for this filesystem using info from super block*/
 	int total_inodes = 0;
 	total_inodes = super.s_inodes_count;
 
@@ -112,8 +118,15 @@ int main(void)
 	int inode_size = 0;
 	inode_size = super.s_inode_size;
 
+
+	/*Neo4j: buffer*/
+	char buffer[100];/*buffer for neo4j-client*/
+	int dir_count=0;
+	int file_count=0;
+
+
 	int entry_count = 0; /*used to check total number of entries*/
-	for (int i = 0; i < total_inodes; i++)
+	for (int i = 1; i <= total_inodes; i++)
 	{
 		uint64_t inode_location = BLOCK_OFFSET(inode_table) + i * inode_size;
 
@@ -121,6 +134,12 @@ int main(void)
 		read(fd, &cur_inode, inode_size);
 
 		//@todo: add code to check whether this inode is valid or not. 
+		// if(ext4_test_inode_state(&cur_inode, EXT4_STATE_XATTR))
+		// 	printf("Tested the iode\n");
+
+
+		
+
 
 		/*read xattr header*/
 		struct ext4_xattr_ibody_header *header;
@@ -129,13 +148,31 @@ int main(void)
 		/*check if the header has right magic number*/
 		if (header->h_magic == ATTR_MAGIC)
 		{
-			printf("\n\n<-----------------------inode: %d------------------------------>\n", (i+1));
+			printf("\n\n<-----------------------inode: %d------------------------------>\n", (i));
 			//@dong: something needed to make sure this is a Lustre Inode
+
+
+
+
+			/*Neo4j: creating nodes for each inode*/
+			sprintf(buffer, "CREATE (n:MDS {inode_number:%d});",(i));
+			neo4j_result_stream_t *results =
+			neo4j_run(connection, buffer, neo4j_null);
+			neo4j_close_results(results);
+
 
 			// determine whether this is a directory of normal file.
 			if (S_ISDIR(cur_inode.i_mode) != 0) //S_IFDIR
 			{
 				printf("This is a directory: block_size: %u\n", block_size);
+				dir_count++;
+
+				/*Neo4j: type = Directory*/
+				sprintf(buffer, "match(n:MDS) where n.inode_number=%d set n.inode_type='directory';",i);
+				results = neo4j_run(connection, buffer, neo4j_null);
+				neo4j_close_results(results);
+
+				
 				
 				void *block_buf = (void *) malloc (block_size);
 				int block_id = 0;
@@ -169,6 +206,12 @@ int main(void)
 			else if (S_ISREG(cur_inode.i_mode) != 0) //S_IFREG
 			{
 				printf("This is a file:");
+				/*Neo4j: type = File*/
+				sprintf(buffer, "match(n:MDS) where n.inode_number=%d set n.inode_type='file';",i);
+				results = neo4j_run(connection, buffer, neo4j_null);
+				neo4j_close_results(results);
+
+				file_count++;
 			}
 
 			/*used to keep check on number if total inodes having xattr header magic number match*/
@@ -209,7 +252,13 @@ int main(void)
 				{
 					struct lustre_mdt_attrs * lma = (struct lustre_mdt_attrs *) value;
 					printf("LMA FID: [0x%llx:0x%x:0x%x]\n", lma->lma_self_fid.f_seq, lma->lma_self_fid.f_oid, lma->lma_self_fid.f_ver);
+					/*Neo4j: lma*/
+					sprintf(buffer, "match(n:MDS) where n.inode_number=%d set n.lma='0x%llx:0x%x:0x%x';",i,lma->lma_self_fid.f_seq, lma->lma_self_fid.f_oid, lma->lma_self_fid.f_ver);
+					results = neo4j_run(connection, buffer, neo4j_null);
+					neo4j_close_results(results);
 				}
+
+				
 
 				if ((char)entry->e_name[0] == 'l' && (char)entry->e_name[1] == 'i' && (char)entry->e_name[2] == 'n' && (char)entry->e_name[3] == 'k')
 				{
@@ -222,13 +271,34 @@ int main(void)
 						printf("Matched LinkEA\n");
 						struct lu_fid *f = (struct lu_fid *) lee->lee_parent_fid;
 						printf("name of the file: %s\t", lee->lee_name);
-						printf("parent FID: [0x%llx:0x%x:0x%x]\n", f->f_seq, f->f_oid, f->f_ver);
+						
+						/*getting pfid*/
+						struct lu_fid *pfid;
+						pfid = (struct lu_fid *)lee->lee_parent_fid;
+						//memcpy(pfid, &lee->lee_parent_fid, sizeof(*pfid));
+						fid_be_to_cpu(pfid, lee->lee_parent_fid);
+						printf("parent FID: [0x%llx:0x%x:0x%x]\n", pfid->f_seq, pfid->f_oid, pfid->f_ver);
+
+						/*Neo4j: link*/
+						sprintf(buffer, "match(n:MDS) where n.inode_number=%d set n.pfid='0x%llx:0x%x:0x%x';",i,pfid->f_seq, pfid->f_oid, pfid->f_ver);
+						results = neo4j_run(connection, buffer, neo4j_null);
+						neo4j_close_results(results);
+						/*Neo4j: relationship-link*/
+						sprintf(buffer, "match (a:MDS),(b:MDS) where a.lma = b.pfid merge (a)-[:mds_parent_of]->(b);");
+						results = neo4j_run(connection, buffer, neo4j_null);
+						neo4j_close_results(results);
+
+
+
 					}
 					else{
 						printf("no match on LINKEA magic, error\n");
 						exit(0);
 					}
 				}
+
+
+
 
 				/*identify if it is lov xattr: check if the entry name is "lov"*/
 				if ((char)entry->e_name[0] == 'l' && (char)entry->e_name[1] == 'o' && (char)entry->e_name[2] == 'v')
@@ -239,13 +309,11 @@ int main(void)
 					if (lum->lmm_magic == LOV_MAGIC_COMP_V1) /*multple entries*/
 					{
 						//printf("%x",lum.lmm_magic);
-						fprintf(fPtr, "It has multiple compenent entries");
 						//comp_v1 = (struct lov_comp_md_v1 *)lum;
 						//ent_count = comp_v1->lcm_entry_count;
 					}
 					else if (lum->lmm_magic == LOV_MAGIC_V1 || lum->lmm_magic == LOV_MAGIC_V3) /*single entry*/
 					{
-						fprintf(fPtr, "It have a single compenent entry\n");
 						ent_count = 1;
 					}
 
@@ -263,22 +331,38 @@ int main(void)
 					for (l = 0; l < ost_numbers; l++)
 					{
 						printf("ost object: %d, ", l);
-						printf("ost_index: %u, ost_generation: %u, ost_object_id: %llu, ost_object_sequence: %llu\n", lum->lmm_objects[l].l_ost_idx, lum->lmm_objects[l].l_ost_gen, lum->lmm_objects[l].l_ost_oi.oi.oi_id, lum->lmm_objects[l].l_ost_oi.oi.oi_seq);
+						printf("ost_index: %u, ost_generation: %u, ost_object_id: 0x%llx, ost_object_sequence: %llx\n", lum->lmm_objects[l].l_ost_idx, lum->lmm_objects[l].l_ost_gen, lum->lmm_objects[l].l_ost_oi.oi.oi_id, lum->lmm_objects[l].l_ost_oi.oi.oi_seq);
 					}
-				}
 
+					/*Neo4j: lov*/
+					sprintf(buffer, "match(n:MDS) where n.inode_number=%d set n.ost_oid='%x' ;",i,lum->lmm_objects[0].l_ost_oi.oi.oi_id);
+					results = neo4j_run(connection, buffer, neo4j_null);
+					neo4j_close_results(results);
+
+
+
+
+				}
 				/*iterate to the next entry*/
 				entry = EXT4_XATTR_NEXT(entry);
 			}
+
+		
+
 		}
 	}
 
 	printf("entry_count: %d\n", entry_count);
 	printf("inode count : %d\n", total_inodes);
-	//printf("inode_bitmap_count: %d", inode_bitmap_count);
-	//printf("size of header struct: %d\n",EXT4_GOOD_OLD_INODE_SIZE);
+	printf("file_count : %d\n", file_count);
+	printf("diretory_count : %d\n", dir_count);
+	
 
-	fclose(fPtr);
+	/*Neo4j: closing the connection*/
+	neo4j_close(connection);
+    neo4j_client_cleanup();
+
+	
 	close(fd);
 
 	exit(0);
