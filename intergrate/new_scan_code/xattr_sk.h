@@ -1,4 +1,7 @@
 #include <stdbool.h>
+#include "/usr/include/linux/swab.h"
+#include "/usr/include/linux/byteorder/little_endian.h"
+//#include "/usr/include/linux/byteorder/big_endian.h"
 
 //contains struct for internal and external attributes
 
@@ -108,6 +111,7 @@ struct lustre_mdt_attrs {
 	struct lu_fid  lma_self_fid;
 };
 
+
 struct lov_ost_data_v1
 {							/* per-stripe data structure (little-endian)*/
 	struct ost_id l_ost_oi; /* OST object ID */
@@ -187,21 +191,15 @@ struct lov_user_md_v1
 	struct lov_user_ost_data_v1 lmm_objects[0]; /* per-stripe data */
 } __attribute__((packed, __may_alias__));
 
-/*from liblustre_layoutapi.c*/
 
-/**
- * An Opaque data type abstracting the layout of a Lustre file.
+/*
+ * Constants relative to the data blocks
  */
-// struct llapi_layout {
-// 	uint32_t	llot_magic; /* LLAPI_LAYOUT_MAGIC */
-// 	uint32_t	llot_gen;
-// 	uint32_t	llot_flags;
-// 	bool		llot_is_composite;
-// 	uint16_t	llot_mirror_count;
-// 	/* Cursor pointing to one of the components in llot_comp_list */
-// 	struct llapi_layout_comp *llot_cur_comp;
-// 	struct list_head	  llot_comp_list;
-// };
+#define	EXT4_NDIR_BLOCKS		12
+#define	EXT4_IND_BLOCK			EXT4_NDIR_BLOCKS
+#define	EXT4_DIND_BLOCK			(EXT4_IND_BLOCK + 1)
+#define	EXT4_TIND_BLOCK			(EXT4_DIND_BLOCK + 1)
+#define	EXT4_N_BLOCKS			(EXT4_TIND_BLOCK + 1)
 
 struct ext4_inode {
 	__le16	i_mode;		/* File mode */
@@ -311,3 +309,108 @@ struct link_ea_entry {
         unsigned char      lee_parent_fid[sizeof(struct lu_fid)];
         char               lee_name[0];
 } __attribute__((packed));
+
+
+/* This is used to convert pfid from big endian to cpu version*/
+/** returns fid object sequence */
+static inline __u64 fid_seq(const struct lu_fid *fid)
+{
+	return fid->f_seq;
+}
+
+/** returns fid object id */
+static inline __u32 fid_oid(const struct lu_fid *fid)
+{
+	return fid->f_oid;
+}
+
+/** returns fid object version */
+static inline __u32 fid_ver(const struct lu_fid *fid)
+{
+	return fid->f_ver;
+}
+
+ static  inline void fid_be_to_cpu(struct lu_fid *dst, const struct lu_fid *src)
+{
+	dst->f_seq = __be64_to_cpu(fid_seq(src));
+	dst->f_oid = __be32_to_cpu(fid_oid(src));
+	dst->f_ver = __be32_to_cpu(fid_ver(src));
+	
+}
+
+
+/*-----------------------------reading FID from OST object------------------------------------*/
+struct lustre_ost_attrs {
+	/* Use lustre_mdt_attrs directly for now, need a common header
+	 * structure if want to change lustre_mdt_attrs in future. */
+	struct lustre_mdt_attrs loa_lma;
+
+	/* Below five elements are for OST-object's PFID EA, the
+	 * lma_parent_fid::f_ver is composed of the stripe_count (high 16 bits)
+	 * and the stripe_index (low 16 bits), the size should not exceed
+	 * 5 * sizeof(__u64)) to be accessable by old Lustre. If the flag
+	 * LMAC_STRIPE_INFO is set, then loa_parent_fid and loa_stripe_size
+	 * are valid; if the flag LMAC_COMP_INFO is set, then the next three
+	 * loa_comp_* elements are valid. */
+	struct lu_fid	loa_parent_fid;
+	__u32		loa_stripe_size;
+	__u32		loa_comp_id;
+	__u64		loa_comp_start;
+	__u64		loa_comp_end;
+};
+
+
+
+
+
+struct ost_layout {
+	__u32	ol_stripe_size;
+	__u32	ol_stripe_count;
+	__u64	ol_comp_start;
+	__u64	ol_comp_end;
+	__u32	ol_comp_id;
+} __attribute__((packed));
+
+
+
+
+
+struct filter_fid {
+	struct lu_fid		ff_parent;	/* stripe_idx in f_ver */
+	struct ost_layout	ff_layout;
+	__u32			ff_layout_version;
+	__u32			ff_range; /* range of layout version that
+					   * write are allowed */
+} __attribute__((packed));
+
+
+struct filter_fid_18_23 {
+	struct lu_fid		ff_parent;	/* stripe_idx in f_ver */
+	__u64			ff_objid;
+	__u64			ff_seq;
+};
+
+
+
+
+
+// /* function to test inode*/
+// static inline int ext4_test_inode_state(struct inode *inode, int bit);
+//  /*
+//  * Inode dynamic state flags
+//  */
+// enum {
+// 	EXT4_STATE_JDATA,		/* journaled data exists */
+// 	EXT4_STATE_NEW,			/* inode is newly created */
+// 	EXT4_STATE_XATTR,		/* has in-inode xattrs */
+// 	EXT4_STATE_NO_EXPAND,		/* No space for expansion */
+// 	EXT4_STATE_DA_ALLOC_CLOSE,	/* Alloc DA blks on close */
+// 	EXT4_STATE_EXT_MIGRATE,		/* Inode is migrating */
+// 	EXT4_STATE_DIO_UNWRITTEN,	/* need convert on dio done*/
+// 	EXT4_STATE_NEWENTRY,		/* File just added to dir */
+// 	EXT4_STATE_DIOREAD_LOCK,	/* Disable support for dio read
+// 					   nolocking */
+// 	EXT4_STATE_MAY_INLINE_DATA,	/* may have in-inode data */
+// 	EXT4_STATE_ORDERED_MODE,	/* data=ordered mode */
+// 	EXT4_STATE_EXT_PRECACHED,	/* extents have been precached */
+// };
